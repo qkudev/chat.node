@@ -1,1 +1,3 @@
-# tor-chat.node
+# cryptoChat.node
+
+Node.js server for **cryptoChat** application

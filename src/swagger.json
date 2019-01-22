@@ -1,15 +1,49 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "Tor Chat API",
+    "title": "cryptoChat API",
     "description": "API description.",
     "version": "1.0.0"
   },
   "host": "api.example.com",
   "schemes": [
-    "http"
+    "http",
+    "wss"
   ],
   "paths": {
-
+    "/auth/signup": {
+      "post": {
+        "summary": "Sign-up by pub key",
+        "parameters": [
+          {
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "pub_key": {
+                  "type": "string"
+                }
+              }
+            },
+            "name": "body"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successfully signed up a new user"
+          }
+        }
+      }
+    },
+    "/settings": {
+      "get": {
+        "summary": "Server settings: public key, prime, length and generator",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
   }
 }

@@ -2,10 +2,10 @@ import express from 'express'
 
 import router from './router'
 
-const server = express()
-server.use(express.json())
-server.use(express.urlencoded({ extended: true }))
+const app = express()
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
 
-server.use('/api/v1', router)
+app.use('/api/v1', router)
 
-export default server
+export default app

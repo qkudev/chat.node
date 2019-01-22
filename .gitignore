@@ -66,5 +66,7 @@ typings/
 .idea
 .vscode
 
-# Build
-dist
+# Databases
+
+*.rdb
+*.sqlite
