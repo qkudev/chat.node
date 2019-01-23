@@ -40,9 +40,27 @@ export function onConnection (socket: Socket) {
     return socket.disconnect(true)
   }
   socket.join(pubKey)
-  const messageList = User.messageList(pubKey)
-  console.log('Messages: ', messageList)
-  socket.emit('message_list', messageList)
+  redis.keys(`${pubKey}:message:*`, function (err, ids) {
+    if (err) throw err
+
+    if (ids && ids.length !== 0) {
+      redis.mget(ids, function (err, messageStrings) {
+        if (err) throw err
+
+        const messages = messageStrings.map(message => JSON.parse(message)) as IMessageJSON[]
+        let messageList = {} as any
+        for (let message of messages) {
+          if (!messageList[message.from]) {
+            messageList[message.from] = []
+          }
+          messageList[message.from].push(message)
+        }
+        socket.emit('message_list', messageList)
+      })
+    } else {
+      socket.emit('message_list', [])
+    }
+  })
 
   socket.on('send_message', (rawMessage: rawMessage) => {
     const message = new Message({ ...rawMessage, from: pubKey })

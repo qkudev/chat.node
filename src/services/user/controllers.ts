@@ -17,10 +17,10 @@ export function messageList (publicKey: string) {
     console.log('ids: ', ids)
 
     if (ids && ids.length !== 0) {
-      redis.mget(ids, function (err, messageStings) {
+      redis.mget(ids, function (err, messageStrings) {
         if (err) throw err
 
-        const messages = messageStings.map(message => JSON.parse(message)) as IMessageJSON[]
+        const messages = messageStrings.map(message => JSON.parse(message)) as IMessageJSON[]
         console.log('Messages: ', messages)
         return messages
       })
