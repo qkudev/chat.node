@@ -70,3 +70,8 @@ typings/
 
 *.rdb
 *.sqlite
+
+# build
+build
+dist
+

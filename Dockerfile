@@ -8,4 +8,4 @@ RUN yarn install
 RUN yarn build
 
 EXPOSE $PORT
-CMD node --no-deprecation ./dist/index.js
+CMD node -r dotenv/config --no-deprecation ./build/index.js
