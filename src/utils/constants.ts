@@ -17,3 +17,5 @@ export const hex = 'hex'
 export const cipher = crypto.createDiffieHellman(PRIME, 'base64', GENERATOR, 'base64')
 cipher.setPublicKey(PUBLIC_KEY, base64)
 cipher.setPrivateKey(PRIVATE_KEY, base64)
+
+export const DAY = 60 * 60 * 24

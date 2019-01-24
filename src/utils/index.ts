@@ -1,7 +1,7 @@
+export { Message } from './message'
+
 // Returns true if string is hex-string and it's length is 512, false otherwise
-export function validateHexKey (key: string): boolean {
-  return /[a-fA-F0-9]{512}$/.test(key)
-}
+export const validateHexKey = (key: string) => /[a-fA-F0-9]{512}$/.test(key)
 
 export function XError (code: number, message?: string) {
   let name = 'InternalServerError'
