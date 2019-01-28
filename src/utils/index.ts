@@ -1,7 +1,15 @@
+import { utils } from 'aes-js'
+
+export * from './aes256'
 export { Message } from './message'
 
-// Returns true if string is hex-string and it's length is 512, false otherwise
-export const validateHexKey = (key: string) => /[a-fA-F0-9]{512}$/.test(key)
+export const hexToBytes = utils.hex.toBytes
+export const utf8ToBytes = utils.utf8.toBytes
+export const bytesToHex = utils.hex.fromBytes
+export const bytesToUtf8 = utils.utf8.fromBytes
+
+// Returns true if string is hex-string and it's length is 64, false otherwise
+export const validateHexKey = (key: string) => /[a-fA-F0-9]{64}$/.test(key)
 
 export function XError (code: number, message?: string) {
   let name = 'InternalServerError'

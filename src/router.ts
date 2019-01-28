@@ -1,10 +1,53 @@
-import { NextFunction, Router, Request, Response } from 'express'
+import { NextFunction, Request, Response, Router } from 'express'
 import SwaggerUi from 'swagger-ui-express'
 
 import docs from './swagger.json'
 import { errorHandler } from './middlewares'
 import * as User from './services/user'
-import { PUBLIC_KEY, PRIME, GENERATOR, PRIME_LENGTH, ENCODING } from './utils/constants'
+import { cipher, ENCODING, GENERATOR, PRIME, PRIME_LENGTH, PUBLIC_KEY } from './utils/constants'
+import { AES256, validateHexKey } from './utils'
+
+async function signUp (req: Request, res: Response, next: NextFunction) {
+  const value = req.body.pub_key
+
+  if (!validateHexKey(value)) {
+    return next({ name: 'BadRequest', message: 'BAD_PUBLIC_KEY' })
+  }
+
+  try {
+    if (await User.model.findById(value)) {
+      return next({ name: 'BadRequest', message: 'PUBLIC_KEY_ALREADY_IN_USE' })
+    }
+
+    const user = await User.model.create({ _id: value })
+    if (!user) {
+      return next({ name: 'InternalServerError' })
+    }
+
+    const secret = cipher.computeSecret(user._id, 'hex', 'hex')
+    if (!validateHexKey(secret)) {
+      return next({ name: 'InternalServerError' })
+    }
+    const encrypted = AES256.encrypt(secret, JSON.stringify(user.toJSON()))
+
+    res.status(201).json({
+      user: encrypted,
+      server_public_key: {
+        value: PUBLIC_KEY,
+        prime: PRIME,
+        length: PRIME_LENGTH
+      }
+    })
+    return next()
+  } catch (e) {
+    return next(e)
+  }
+}
+
+function getSettings (req: Request, res: Response, next: NextFunction) {
+  res.status(200).json({ ...settings })
+  return next()
+}
 
 const settings = {
   public_key: PUBLIC_KEY,
@@ -15,16 +58,12 @@ const settings = {
 }
 
 const router = Router()
-
 router.use('/swagger', SwaggerUi.serve)
 router.get('/swagger', SwaggerUi.setup(docs))
 
-router.use('', User.router)
-
-router.get('/settings', function (req: Request, res: Response, next: NextFunction) {
-  res.status(200).json({ ...settings })
-  return next()
-})
+router.use('/users', User.router)
+router.post('/auth/signup', signUp)
+router.get('/settings', getSettings)
 
 router.use(errorHandler)
 

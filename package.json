@@ -4,7 +4,7 @@
   "description": "Node.js service for encrypted messaging",
   "main": "src/index.ts",
   "repository": "ssh://git@gitlab-ssh.upstream.team:10022/tor-chat/node.git",
-  "author": "upstream",
+  "author": "upstream.team",
   "license": "MIT",
   "private": true,
   "scripts": {
@@ -12,6 +12,7 @@
     "start": "nodemon"
   },
   "devDependencies": {
+    "@types/aes-js": "^3.1.0",
     "@types/express": "^4.16.0",
     "@types/mongodb": "^3.1.19",
     "@types/mongoose": "^5.3.8",
@@ -29,8 +30,8 @@
     "typescript": "^3.2.4"
   },
   "dependencies": {
+    "aes-js": "^3.1.2",
     "aes256": "^1.0.4",
-    "crypto": "^1.0.1",
     "dotenv": "^6.2.0",
     "express": "^4.16.4",
     "mongoose": "^5.4.4",

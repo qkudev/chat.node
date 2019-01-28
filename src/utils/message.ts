@@ -1,10 +1,14 @@
-import { io, redis } from '../index'
+import { io } from '../index'
 import { DAY } from './constants'
 
 const uuid4 = require('uuid/v4')
 
 export class Message {
   private io = io
+
+  static fromString = function (messageString: string): IMessageJSON {
+    return JSON.parse(messageString)
+  }
 
   readonly id: string
   readonly to: string
@@ -25,7 +29,7 @@ export class Message {
     this.to = props.to
     this.ei = props.ei || 3 * DAY
 
-    this.redisKey = `${this.to}:message:${this.id}`
+    this.redisKey = `message:${this.id}`
   }
 
   toJSON = (): IMessageJSON => ({

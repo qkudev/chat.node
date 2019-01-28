@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from 'express'
+import { NextFunction, Request, Response } from 'express'
 
-interface XError extends Error {
+export interface XError extends Error {
   code?: number
   name: string
   message: string
@@ -27,9 +27,9 @@ export default function (err: XError, req: Request, res: Response, next: NextFun
       break
     }
     default:
-      res.status(err.code || 500).json({
-        code: err.code || 500,
-        message: err.message || 'INTERNAL_SERVER_ERROR'
+      res.status(500).json({
+        code: 500,
+        message: 'INTERNAL_SERVER_ERROR'
       })
   }
 

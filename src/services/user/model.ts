@@ -1,16 +1,14 @@
-import { Document, Schema, model as Model } from 'mongoose'
+import { Document, model as Model, Schema } from 'mongoose'
 import paginate from 'mongoose-paginate'
-const otplib = require('otplib')
-
-import { PRIME, GENERATOR } from '../../utils/constants'
-import { redis } from '../../index'
+import crypto from 'crypto'
+import { GENERATOR, PRIME } from '../../utils/constants'
 
 export interface IUser extends Document {
   createdAt: Date
   updatedAt: Date
 
   username?: string
-  otp?: string
+  otp: string
   prime?: string
   generator?: string
 }
@@ -20,7 +18,8 @@ export const schema = new Schema(
     _id: {
       type: String,
       required: true,
-      unique: true
+      unique: true,
+      validate: /[a-fA-F0-9]{64}$/
     },
     generator: {
       type: String,
@@ -35,7 +34,8 @@ export const schema = new Schema(
     otp: {
       type: String,
       required: true,
-      default: otplib.authenticator.generateSecret
+      // 64-length hex string
+      default: () => crypto.randomBytes(32).toString('hex')
     }
   },
   {

@@ -14,8 +14,11 @@ export const ENCODING = process.env.ENCODING as string
 export const base64 = 'base64'
 export const hex = 'hex'
 
-export const cipher = crypto.createDiffieHellman(PRIME, 'base64', GENERATOR, 'base64')
-cipher.setPublicKey(PUBLIC_KEY, base64)
-cipher.setPrivateKey(PRIVATE_KEY, base64)
+export const cipher = crypto.createDiffieHellman(PRIME, 'hex', GENERATOR, 'hex')
+cipher.setPublicKey(PUBLIC_KEY, hex)
+cipher.setPrivateKey(PRIVATE_KEY, hex)
 
 export const DAY = 60 * 60 * 24
+
+export const REDIS_HOST = process.env.REDIS_HOST || 'localhost'
+export const REDIS_PORT = parseInt(process.env.REDIS_PORT || '6379', 10)

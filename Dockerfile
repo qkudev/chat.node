@@ -5,7 +5,6 @@ RUN yarn global add nodemon ts-node typescript
 
 COPY . .
 RUN yarn install
-RUN yarn build
 
-EXPOSE $PORT
-CMD node -r dotenv/config --no-deprecation ./build/index.js
+EXPOSE 5000
+CMD nodemon

@@ -1,8 +1,13 @@
-import express from 'express'
-
+import express, { NextFunction, Request, Response } from 'express'
 import router from './router'
 
 const app = express()
+
+app.use(function (req: Request, res: Response, next: NextFunction) {
+  console.log(`${req.method}: ${req.path} ${new Date().toISOString()}`)
+  return next()
+})
+
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
