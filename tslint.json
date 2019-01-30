@@ -4,7 +4,9 @@
         "tslint-config-standard"
     ],
     "linterOptions": {
-
+        "exclude": [
+            "*/**/*.json"
+        ]
     },
     "jsRules": {},
     "rules": {},

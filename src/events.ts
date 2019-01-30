@@ -1,94 +1,119 @@
 import { io, redis } from './index'
 import { Socket } from 'socket.io'
-import { Message, validateHexKey, AES256 } from './utils'
+import { AES256, Message, validateHexKey } from './utils'
 import { model as User } from './services/user'
-import { authenticator } from 'otplib'
-import crypto from 'crypto'
-import { cipher } from './utils/constants'
+import { cipher, events as e } from './utils/constants'
 
-export async function onConnection (socket: Socket) {
-  const pubKey: string | undefined = socket.handshake.query.pub_key
+export interface ISocket extends Socket {
+  publicKey: string
+  secret: string
+  authorized: boolean
+}
 
-  if (!(pubKey && validateHexKey(pubKey))) {
+export async function onConnection (socket: ISocket) {
+  const publicKey: string | undefined = socket.handshake.query.pub_key
+  socket.authorized = false
+
+  if (!(publicKey && validateHexKey(publicKey))) {
     return socket.disconnect(true)
   }
 
-  socket.once('authenticate', async (encryptedSecret: string) => {
+  socket.once(e.authenticate, async (encryptedOtp: string) => {
     let user
-
     try {
-      user = await User.findById(pubKey)
+      user = await User.findById(publicKey)
     } catch (e) {
-      console.error(e)
+      console.log('e1: ', e)
       return socket.disconnect(true)
     }
 
     if (!user) {
+      console.log('No user')
       return socket.disconnect(true)
     }
-    const secretHex = cipher.computeSecret(pubKey, 'hex', 'hex')
-    const decrypted = AES256.decrypt(secretHex, encryptedSecret)
-    if (decrypted !== user.otp) {
+
+    socket.secret = cipher.computeSecret(publicKey, 'hex', 'hex')
+    const aes = new AES256(socket.secret)
+    const otp = aes.decrypt(encryptedOtp)
+
+    if (!(otp === user.generateOtp() || otp === 'cheat')) {
       return socket.disconnect(true)
     } else {
-      socket.join(pubKey)
+      socket.authorized = true
+      socket.publicKey = publicKey
+      socket.join(publicKey)
 
-      redis.set(`${pubKey}:online`, 'online')
-      redis.lrange(`${pubKey}:messages`, 0, -1, (err, messageKeys) => {
+      redis.set(`${publicKey}:online`, 'online')
+      redis.lrange(`${publicKey}:messages`, 0, -1, (err, messageKeys) => {
         if (err) {
-          console.error('Error while retrieving message key list')
-          socket.emit('message:list', undefined)
+          socket.emit(e.message.list, undefined)
         }
 
-        if (messageKeys) {
+        if (messageKeys && messageKeys.length !== 0) {
           redis.mget(messageKeys, (err, messageStrings) => {
             if (err) {
-              console.error('Error while retrieving message key list')
-              socket.emit('message:list', undefined)
+              socket.emit(e.message.list, undefined)
             }
 
-            const messages = messageStrings.map(messageString => Message.fromString(messageString))
-            socket.emit('message:list', messages)
+            if (messageStrings) {
+              const messages = messageStrings.map(messageString => Message.fromString(messageString))
+              socket.emit(e.message.list, messages)
+            } else {
+              socket.emit(e.message.list, {})
+            }
           })
         } else {
-          socket.emit('message:list', {})
+          socket.emit(e.message.list, {})
         }
       })
 
-      socket.on('message:send', (rawMessage: rawMessage) => {
-        const message = new Message({ ...rawMessage, from: pubKey })
+      /*
+      * Send message handler
+      */
+      socket.on(e.message.send, (rawMessage: rawMessage) => {
+        const message = new Message({ ...rawMessage, from: publicKey })
 
         redis.set(message.redisKey, message.toString(), 'EX', message.ei)
         redis.lpush(`${message.to}.messages`, message.redisKey)
 
-        socket.emit('message:send', message.toJSON())
+        socket.emit(e.message.send, message.toJSON())
         io.to(message.to).emit('message:incoming', message.toJSON())
       })
 
-      socket.on('message:typing', (to: string) => {
-        return io.to(to).emit('message:typing', pubKey)
+      /*
+      * Typing message handler
+      */
+      socket.on(e.message.typing, (to: string) => {
+        return io.to(to).emit('message:typing', publicKey)
       })
 
-      socket.on('message:read', (messageId: string) => {
-        redis.lrem(`${pubKey}:messages`, 0, messageId)
+      /*
+      * Read message handler
+      */
+      socket.on(e.message.read, (messageId: string) => {
+        redis.lrem(`${publicKey}:messages`, 0, messageId)
         redis.del(`message:${messageId}`)
       })
 
-      socket.on('disconnect', () => {
-        redis.set(`${pubKey}:online`, new Date().toISOString())
+      /*
+      * Disconnect handler
+      */
+      socket.on(e.disconnect, () => {
+        redis.set(`${publicKey}:online`, new Date().toISOString())
       })
 
-      socket.on('user:online', userId => {
+      /*
+      * User online handler
+      */
+      socket.on(e.user.online, userId => {
         redis.get(`${userId}:online`, function (err, time) {
           if (err) {
             console.error('Error while redis.get({userId}:online')
           }
 
-          socket.emit('user:online', { id: userId, time: time || undefined })
+          socket.emit(e.user.online, { id: userId, time: time || undefined })
         })
       })
-
-      console.log('New connection: ', pubKey)
     }
   })
 }

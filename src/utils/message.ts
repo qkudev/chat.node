@@ -17,6 +17,7 @@ export class Message {
   readonly body: string
   readonly ts: Date
   readonly ei: number
+  readonly status: 'ERROR' | 'SENT' | 'READ' | 'DELIVERED'
 
   readonly redisKey: string
 
@@ -28,6 +29,7 @@ export class Message {
     this.from = props.from
     this.to = props.to
     this.ei = props.ei || 3 * DAY
+    this.status = 'SENT'
 
     this.redisKey = `message:${this.id}`
   }
@@ -38,7 +40,8 @@ export class Message {
     from: this.from,
     body: this.body,
     ts: this.ts.toISOString(),
-    ei: this.ei
+    ei: this.ei,
+    status: this.status
   })
 
   toString = (): string => JSON.stringify(this.toJSON())

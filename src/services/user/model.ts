@@ -2,15 +2,17 @@ import { Document, model as Model, Schema } from 'mongoose'
 import paginate from 'mongoose-paginate'
 import crypto from 'crypto'
 import { GENERATOR, PRIME } from '../../utils/constants'
+import { authenticator } from 'otplib'
 
 export interface IUser extends Document {
   createdAt: Date
   updatedAt: Date
 
-  username?: string
   otp: string
   prime?: string
   generator?: string
+
+  generateOtp: () => string
 }
 
 export const schema = new Schema(
@@ -19,7 +21,8 @@ export const schema = new Schema(
       type: String,
       required: true,
       unique: true,
-      validate: /[a-fA-F0-9]{64}$/
+      validate: /[a-fA-F0-9]{64}$/,
+      lowercase: true
     },
     generator: {
       type: String,
@@ -47,5 +50,10 @@ export const schema = new Schema(
 )
 
 schema.plugin(paginate)
+
+schema.methods.generateOtp = function () {
+  const user = this as IUser
+  return authenticator.generate(user.otp)
+}
 
 export const model = Model<IUser>('User', schema)

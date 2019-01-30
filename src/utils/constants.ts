@@ -22,3 +22,18 @@ export const DAY = 60 * 60 * 24
 
 export const REDIS_HOST = process.env.REDIS_HOST || 'localhost'
 export const REDIS_PORT = parseInt(process.env.REDIS_PORT || '6379', 10)
+
+export const events = {
+  message: {
+    send: 'message:send',
+    incoming: 'message:incoming',
+    list: 'message:list',
+    read: 'message:read',
+    typing: 'message:typing'
+  },
+  user: {
+    online: 'online'
+  },
+  disconnect: 'disconnect',
+  authenticate: 'authenticate'
+}

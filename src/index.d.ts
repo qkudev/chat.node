@@ -20,6 +20,7 @@ interface IMessageJSON {
   body: string
   ts: string
   ei: number
+  status: 'ERROR' | 'SENT' | 'READ' | 'DELIVERED' 
 }
 
 interface MessageProps {
