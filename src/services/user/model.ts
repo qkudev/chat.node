@@ -1,7 +1,7 @@
 import { Document, model as Model, Schema } from 'mongoose'
 import paginate from 'mongoose-paginate'
 import crypto from 'crypto'
-import { GENERATOR, PRIME } from '../../utils/constants'
+import { GENERATOR, PRIME } from '../../utils'
 import { authenticator } from 'otplib'
 
 export interface IUser extends Document {

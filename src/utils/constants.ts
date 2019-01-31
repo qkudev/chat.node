@@ -1,5 +1,7 @@
 export const crypto = require('crypto')
 
+export const NODE_ENV = process.env.NODE_ENV || 'development'
+
 export const HOST = process.env.HOST || 'localhost'
 export const PORT = parseInt(process.env.PORT as string, 10) || 5000
 
@@ -29,11 +31,15 @@ export const events = {
     incoming: 'message:incoming',
     list: 'message:list',
     read: 'message:read',
-    typing: 'message:typing'
+    typing: 'message:typing',
+    received: 'message:received',
+    update: 'message:update',
+    remove: 'message:remove'
   },
   user: {
     online: 'online'
   },
   disconnect: 'disconnect',
-  authenticate: 'authenticate'
+  authenticate: 'authenticate',
+  connection: 'connection'
 }

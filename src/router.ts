@@ -4,8 +4,7 @@ import SwaggerUi from 'swagger-ui-express'
 import docs from './swagger.json'
 import { errorHandler } from './middlewares'
 import * as User from './services/user'
-import { cipher, ENCODING, GENERATOR, PRIME, PRIME_LENGTH, PUBLIC_KEY } from './utils/constants'
-import { AES256, validateHexKey } from './utils'
+import { ENCODING, GENERATOR, PRIME, PRIME_LENGTH, PUBLIC_KEY, validateHexKey } from './utils'
 
 async function signUp (req: Request, res: Response, next: NextFunction) {
   const value = req.body.pub_key
@@ -24,14 +23,8 @@ async function signUp (req: Request, res: Response, next: NextFunction) {
       return next({ name: 'InternalServerError' })
     }
 
-    const secret = cipher.computeSecret(user._id, 'hex', 'hex')
-    if (!validateHexKey(secret)) {
-      return next({ name: 'InternalServerError' })
-    }
-    const encrypted = AES256.encrypt(secret, JSON.stringify(user.toJSON()))
-
     res.status(201).json({
-      user: encrypted,
+      user: user.toJSON(),
       server_public_key: {
         value: PUBLIC_KEY,
         prime: PRIME,

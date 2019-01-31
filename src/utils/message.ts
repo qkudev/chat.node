@@ -1,49 +1,142 @@
-import { io } from '../index'
+import { io, redis } from '../index'
 import { DAY } from './constants'
-
+import { RedisClient } from 'redis'
 const uuid4 = require('uuid/v4')
 
+export enum Status { 'ERROR', 'LOADING', 'SENT', 'READ' }
+
+export type rawMessage = {
+  to: string
+
+  body: string
+  status: typeof Status.LOADING | typeof Status.ERROR
+  ei?: number
+}
+
+export interface IMessage {
+  id: string
+
+  to: string
+  from: string
+  body: string
+
+  status: Status
+  createdAt: Date
+  updatedAt: Date
+  ei: number
+}
+
+export interface IMessageJSON {
+  id: string | undefined
+  to: string
+  from: string
+  body: string
+
+  status: Status
+  createdAt: Date
+  updatedAt: Date
+  ei: number
+}
+
+export interface MessageProps {
+  id?: string
+
+  to: string
+  from: string
+  body: string
+
+  status: Status
+  createdAt?: Date
+  updatedAt?: Date
+  ei?: number
+}
+
 export class Message {
-  private io = io
+  public static readonly io = io
+  public static readonly redis: RedisClient = redis
 
-  static fromString = function (messageString: string): IMessageJSON {
-    return JSON.parse(messageString)
-  }
-
-  readonly id: string
+  readonly id: string | undefined
   readonly to: string
   readonly from: string
-
   readonly body: string
-  readonly ts: Date
-  readonly ei: number
-  readonly status: 'ERROR' | 'SENT' | 'READ' | 'DELIVERED'
 
-  readonly redisKey: string
+  private _status: Status
+  readonly createdAt: Date
+  readonly updatedAt: Date
+  readonly ei: number
 
   constructor (props: MessageProps) {
-    this.id = uuid4()
-    this.ts = new Date()
+    const { redis } = Message
+    const now = new Date()
 
-    this.body = props.body
-    this.from = props.from
+    this.id = props.id || uuid4()
     this.to = props.to
-    this.ei = props.ei || 3 * DAY
-    this.status = 'SENT'
+    this.from = props.from
+    this.body = props.body
 
-    this.redisKey = `message:${this.id}`
+    this.createdAt = props.createdAt || now
+    this.updatedAt = props.updatedAt || now
+    this.ei = props.ei || 3 * DAY
+
+    if (props.status !== Status.LOADING) {
+      this._status = props.status
+    } else {
+      this._status = Status.SENT
+
+      redis.hmset(this.redisKey, this.toRedis(), (err) =>
+        err ? this._status = Status.ERROR : undefined)
+      redis.lpush(`${this.to}:messages`, this.toRedis(), (err) =>
+        err ? this._status = Status.ERROR : undefined)
+      redis.lpush(`${this.from}:messages`, this.toRedis(), (err) =>
+        err ? this._status = Status.ERROR : undefined)
+    }
   }
 
   toJSON = (): IMessageJSON => ({
-    id: this.id,
+    id: this.id || undefined,
     to: this.to,
     from: this.from,
     body: this.body,
-    ts: this.ts.toISOString(),
-    ei: this.ei,
-    status: this.status
+    status: this.status,
+    createdAt: this.createdAt,
+    updatedAt: this.updatedAt,
+    ei: this.ei
   })
 
   toString = (): string => JSON.stringify(this.toJSON())
 
+  toRedis = (): any => ({
+    id: this.id || undefined,
+    to: this.to,
+    from: this.from,
+    body: this.body,
+    status: this.status,
+    createdAt: this.createdAt.toISOString(),
+    updatedAt: this.updatedAt.toISOString(),
+    ei: this.ei
+  })
+
+  get redisKey () { return `message:${this.id}` }
+
+  get status () { return this._status }
+  set status (stat) {
+    if (stat === Status.ERROR || stat === Status.LOADING || stat === Status.SENT || stat === Status.READ) {
+      this._status = stat
+    } else {
+      throw new Error('BadMessageStatusError')
+    }
+  }
+
+  public static getById = (id: string) => {
+    return redis.hgetall(`message:${id}`, function (err, res) {
+      if (err) {
+        throw err
+      }
+      return res
+    })
+  }
 }
+
+// const msg = Message.getById()
+
+// const message = new Message({ to: 'kek', from: 'lel', body: '123', status: Status.LOADING })

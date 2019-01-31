@@ -6,6 +6,8 @@ export * from './aes256'
 export * from './constants'
 export { Message } from './message'
 
+export type callback = (err: any | undefined, res?: any) => void
+
 export const hexToBytes = hex.toBytes
 export const utf8ToBytes = utf8.toBytes
 export const bytesToHex = hex.fromBytes
