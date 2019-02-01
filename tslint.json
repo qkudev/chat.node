@@ -9,6 +9,8 @@
         ]
     },
     "jsRules": {},
-    "rules": {},
+    "rules": {
+        "no-return-await": false
+    },
     "rulesDirectory": []
 }

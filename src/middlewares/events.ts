@@ -34,20 +34,17 @@ export async function onConnection (socket: ISocket) {
   }
 
   if (!(user && otp === user.generateOtp())) {
-    console.log('Auth Error. No user found or bad OTP value')
     console.log('OTPs | user: ', otp, '| server: ', user && user.generateOtp())
     socket.disconnect(true)
     return
   }
 
+  redis.set(`${publicKey}:online`, 'online')
   socket.authorized = true
   socket.publicKey = publicKey
   socket.secret = cipher.computeSecret(publicKey, 'hex', 'hex')
   socket.user = user
   socket.join(publicKey)
-
-  redis.set(`${publicKey}:online`, 'online')
-  s.emitMessageList.bind({ socket })()
 
   socket.on(e.message.send, s.onMessageSend.bind({ socket }))
   socket.on(e.message.update, s.onMessageUpdate.bind({ socket }))
@@ -56,8 +53,26 @@ export async function onConnection (socket: ISocket) {
   socket.on(e.message.typing, s.onTyping.bind({ socket }))
   socket.on(e.disconnect, s.onDisconnect.bind({ socket }))
   socket.on(e.user.online, s.onUserOnline.bind({ socket }))
-
-  socket.on('kek', (lel: any, fn: Function) => {
-    fn(lel + ' ahahahahahah')
+  socket.on(e.message.list, (cb: Function) => {
+    redis.lrange(`${publicKey}:messages`, 0, -1, (err, ids) => {
+      if (err) { return cb(err) }
+      let normalized: any = {}
+      Promise.all(ids.map(id => new Promise((resolve, reject) =>
+        redis.hgetall(id, (err, message) => {
+          if (err) { return reject(err) }
+          const key = message.to === publicKey ? message.from : message.to
+          if (!normalized[key]) {
+            normalized[key] = {
+              messages: [],
+              numUnread: 0
+            }
+          }
+          normalized[key].messages.push(message)
+          // @ts-ignore
+          if (message.status !== 3) { normalized[key].numUnread += 1 }
+          return resolve(message)
+        }))))
+        .then(() => cb(undefined, normalized), err => cb(err))
+    })
   })
 }

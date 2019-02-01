@@ -5,31 +5,33 @@ import { Message, Status, rawMessage, IMessageJSON } from '../utils/message'
 import { Packet } from 'socket.io'
 import { NextFunction } from 'express'
 import { model as User } from '../services/user'
+import uuid4 = require('uuid/v4')
 
 export * from './emit'
 
-export function onMessageSend (rawMessage: rawMessage, cb: callback) {
-  const socket = this.socket as ISocket
+export function onMessageSend (raw: rawMessage, cb: callback) {
+  const now = new Date().toISOString()
+  const message = {
+    ...raw,
+    id: uuid4(),
+    status: Status.SENT,
+    createdAt: now,
+    updatedAt: now
+  }
 
-  const message = new Message({
-    to: rawMessage.to,
-    from: socket.publicKey,
-    body: rawMessage.body,
-    status: Status.SENT
-  })
-
-  redis.hmset(message.redisKey, { ...message.toRedis() }, (err: any) => {
+  const key = `message:${message.id}`
+  redis.hmset(key, message, (err: any) => {
     if (err) { cb(err, undefined) }
   })
-  redis.lpush(`${message.to}:messages`, message.redisKey, (err: any) => {
+  redis.lpush(`${message.to}:messages`, key, (err: any) => {
     if (err) { cb(err, undefined) }
   })
-  redis.lpush(`${message.from}`, message.redisKey, (err: any) => {
+  redis.lpush(`${message.from}:messages`, key, (err: any) => {
     if (err) { cb(err, undefined) }
   })
 
-  cb(undefined, message.toJSON())
-  io.to(message.to).emit(e.message.incoming, message.toJSON())
+  io.to(message.to).emit(e.message.incoming, message)
+  return cb(undefined, message)
 }
 
 export function onTyping (to: string) {
@@ -43,18 +45,18 @@ export function onDisconnect () {
 }
 
 export function onMessageRead (messageIds: string[]) {
-  messageIds.map(id => redis.hset(`message:${id}`, 'status', 'READ'))
+  messageIds.map(id => redis.hset(`message:${id}`, 'status', '3'))
 }
 
-export function onUserOnline (userId: string) {
+export function onUserOnline (id: string) {
   const socket = this.socket as ISocket
 
-  redis.get(`${userId}:online`, function (err, time) {
+  redis.get(`${id}:online`, function (err, time) {
     if (err) {
       console.log('Error onUserOnline, redis: ', err)
     }
 
-    socket.emit(e.user.online, { id: userId, time: time || undefined })
+    socket.emit(e.user.online, { id: id, time: time || undefined })
   })
 }
 

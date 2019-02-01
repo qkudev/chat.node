@@ -7,10 +7,11 @@ export enum Status { 'ERROR', 'LOADING', 'SENT', 'READ' }
 
 export type rawMessage = {
   to: string
+  from: string
 
   body: string
   status: typeof Status.LOADING | typeof Status.ERROR
-  ei?: number
+  ei: number
 }
 
 export interface IMessage {
@@ -102,8 +103,6 @@ export class Message {
     updatedAt: this.updatedAt,
     ei: this.ei
   })
-
-  toString = (): string => JSON.stringify(this.toJSON())
 
   toRedis = (): any => ({
     id: this.id || undefined,
