@@ -10,7 +10,15 @@ import * as e from './middlewares/events'
 
 initMongoose()
 
-export const redis = redisjs.createClient(REDIS_PORT, REDIS_HOST)
+export let redis: any
+
+try {
+  redis = redisjs.createClient(REDIS_PORT, REDIS_HOST)
+} catch (e) {
+  console.log(e)
+  redis = undefined
+}
+
 export const server = new http.Server(app)
 export const io = socketIo(server)
 
