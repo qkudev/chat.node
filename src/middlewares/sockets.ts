@@ -1,7 +1,7 @@
 import { ISocket } from '../middlewares/events'
 import { io, redis } from '../index'
 import { callback, cipher, events as e, validateHexKey } from '../utils'
-import { Message, Status, rawMessage, IMessageJSON } from '../utils/message'
+import { Message, Status, rawMessage, IMessageJSON, IMessage } from '../utils/message'
 import { Packet } from 'socket.io'
 import { NextFunction } from 'express'
 import { model as User } from '../services/user'
@@ -10,10 +10,12 @@ import uuid4 = require('uuid/v4')
 export * from './emit'
 
 export function onMessageSend (raw: rawMessage, cb: callback) {
+  const socket = this.socket as ISocket
   const now = new Date().toISOString()
   const message = {
     ...raw,
     id: uuid4(),
+    from: socket.publicKey,
     status: Status.SENT,
     createdAt: now,
     updatedAt: now
@@ -21,13 +23,13 @@ export function onMessageSend (raw: rawMessage, cb: callback) {
 
   const key = `message:${message.id}`
   redis.hmset(key, message, (err: any) => {
-    if (err) { cb(err, undefined) }
+    if (err) { return cb(err, undefined) }
   })
   redis.lpush(`${message.to}:messages`, key, (err: any) => {
-    if (err) { cb(err, undefined) }
+    if (err) { return cb(err, undefined) }
   })
   redis.lpush(`${message.from}:messages`, key, (err: any) => {
-    if (err) { cb(err, undefined) }
+    if (err) { return cb(err, undefined) }
   })
 
   io.to(message.to).emit(e.message.incoming, message)
@@ -45,7 +47,14 @@ export function onDisconnect () {
 }
 
 export function onMessageRead (messageIds: string[]) {
-  messageIds.map(id => redis.hset(`message:${id}`, 'status', '3'))
+  const socket = this.socket as ISocket
+  messageIds.map(id => {
+    redis.hget(`message:${id}`, 'from', function (err, fromId) {
+      if (err) { return console.log(err) }
+      socket.to(fromId).emit(e.message.read, [id])
+    })
+    redis.hset(`message:${id}`, 'status', '3')
+  })
 }
 
 export function onUserOnline (id: string) {
@@ -93,18 +102,10 @@ export function onMessageRemove (id: string, cb: callback) {
     if (message.from !== socket.publicKey) {
       return cb({ name: 'NOT_AUTHORIZED', code: 403 })
     }
-    // redis.hdel(`message:${id}`, function (err) {
-    //   return err ? cb(err) : cb(undefined, id)
-    // })
+    redis.hdel(`message:${id}`, function (err) {
+      return err ? cb(err) : cb(undefined, id)
+    })
   })
-
-  // redis.hdel(`message:${id}`, function (error: any) {
-  //   if (error) {
-  //     cb(error, id)
-  //   } else {
-  //     cb(undefined, id)
-  //   }
-  // })
 }
 
 export async function authMiddleware (socket: ISocket, next: NextFunction) {

@@ -39,6 +39,7 @@ export async function onConnection (socket: ISocket) {
     return
   }
 
+  console.log('Successfully authenticated!')
   redis.set(`${publicKey}:online`, 'online')
   socket.authorized = true
   socket.publicKey = publicKey
@@ -56,23 +57,33 @@ export async function onConnection (socket: ISocket) {
   socket.on(e.message.list, (cb: Function) => {
     redis.lrange(`${publicKey}:messages`, 0, -1, (err, ids) => {
       if (err) { return cb(err) }
-      let normalized: any = {}
-      Promise.all(ids.map(id => new Promise((resolve, reject) =>
-        redis.hgetall(id, (err, message) => {
+      let chats: { byId: any, allIds: string[], count: number } = {
+        byId: {},
+        allIds: [],
+        count: 0
+      }
+      let messages: any = []
+      Promise.all(ids.map((messageId: string) => new Promise((resolve, reject) =>
+        redis.hgetall(messageId, (err, message) => {
           if (err) { return reject(err) }
-          const key = message.to === publicKey ? message.from : message.to
-          if (!normalized[key]) {
-            normalized[key] = {
+          const key = message.from === publicKey ? message.to : message.from
+          if (!chats.byId.hasOwnProperty(key)) {
+            chats.byId[key] = {
+              id: key,
               messages: [],
-              numUnread: 0
+              count: 0
             }
+            chats.count += 1
+            chats.allIds.push(key)
           }
-          normalized[key].messages.push(message)
-          // @ts-ignore
-          if (message.status !== 3) { normalized[key].numUnread += 1 }
+          chats.byId[key].messages = [message, ...chats.byId[key].messages]
+          chats.byId[key].count += 1
+          messages.push(message)
           return resolve(message)
         }))))
-        .then(() => cb(undefined, normalized), err => cb(err))
+        .then(() => {
+          return cb(undefined, { ...chats })
+        }, err => cb(err))
     })
   })
 }

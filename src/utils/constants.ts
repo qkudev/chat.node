@@ -40,6 +40,5 @@ export const events = {
     online: 'online'
   },
   disconnect: 'disconnect',
-  authenticate: 'authenticate',
   connection: 'connection'
 }
