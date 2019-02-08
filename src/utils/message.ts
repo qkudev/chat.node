@@ -125,15 +125,6 @@ export class Message {
       throw new Error('BadMessageStatusError')
     }
   }
-
-  public static getById = (id: string) => {
-    return redis.hgetall(`message:${id}`, function (err, res) {
-      if (err) {
-        throw err
-      }
-      return res
-    })
-  }
 }
 
 // const msg = Message.getById()
