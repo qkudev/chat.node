@@ -60,6 +60,10 @@ router.get('/swagger', SwaggerUi.setup(docs))
 router.use('/users', User.router)
 router.post('/auth/signup', signUp)
 router.get('/settings', getSettings)
+router.post('/test', (req: Request, res: Response, next: NextFunction) => {
+  console.log(req.body)
+  res.status(200).end()
+})
 
 router.use(errorHandler)
 
